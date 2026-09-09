@@ -1,4 +1,6 @@
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{
+  BatchSize, Criterion, black_box, criterion_group, criterion_main,
+};
 use url::Url;
 use urlpattern::UrlPattern;
 use urlpattern::UrlPatternInit;
@@ -59,22 +61,30 @@ fn bench_exec(c: &mut Criterion) {
     let non_matching: Url = non_matching.parse().unwrap();
 
     group.bench_function(format!("{name}/match"), |b| {
-      b.iter(|| {
-        compiled
-          .exec(UrlPatternMatchInput::Url(black_box(matching.clone())))
-          .unwrap()
-          .unwrap()
-      })
+      b.iter_batched(
+        || matching.clone(),
+        |url| {
+          compiled
+            .exec(UrlPatternMatchInput::Url(url))
+            .unwrap()
+            .unwrap()
+        },
+        BatchSize::SmallInput,
+      )
     });
     group.bench_function(format!("{name}/no-match"), |b| {
-      b.iter(|| {
-        assert!(
-          compiled
-            .exec(UrlPatternMatchInput::Url(black_box(non_matching.clone())))
-            .unwrap()
-            .is_none()
-        )
-      })
+      b.iter_batched(
+        || non_matching.clone(),
+        |url| {
+          assert!(
+            compiled
+              .exec(UrlPatternMatchInput::Url(url))
+              .unwrap()
+              .is_none()
+          )
+        },
+        BatchSize::SmallInput,
+      )
     });
   }
   group.finish();
@@ -89,13 +99,11 @@ fn bench_test(c: &mut Criterion) {
     let matching: Url = matching.parse().unwrap();
 
     group.bench_function(*name, |b| {
-      b.iter(|| {
-        assert!(
-          compiled
-            .test(UrlPatternMatchInput::Url(black_box(matching.clone())))
-            .unwrap()
-        )
-      })
+      b.iter_batched(
+        || matching.clone(),
+        |url| assert!(compiled.test(UrlPatternMatchInput::Url(url)).unwrap()),
+        BatchSize::SmallInput,
+      )
     });
   }
   group.finish();
@@ -105,19 +113,24 @@ fn bench_test(c: &mut Criterion) {
 fn bench_exec_init(c: &mut Criterion) {
   let compiled = compile("https://example.test/users/:id");
 
+  let init = UrlPatternInit {
+    protocol: Some("https".to_owned()),
+    hostname: Some("example.test".to_owned()),
+    pathname: Some("/users/123".to_owned()),
+    ..Default::default()
+  };
+
   c.bench_function("exec_init/named-group", |b| {
-    b.iter(|| {
-      let init = UrlPatternInit {
-        protocol: Some("https".to_owned()),
-        hostname: Some("example.test".to_owned()),
-        pathname: Some("/users/123".to_owned()),
-        ..Default::default()
-      };
-      compiled
-        .exec(UrlPatternMatchInput::Init(black_box(init)))
-        .unwrap()
-        .unwrap()
-    })
+    b.iter_batched(
+      || init.clone(),
+      |init| {
+        compiled
+          .exec(UrlPatternMatchInput::Init(init))
+          .unwrap()
+          .unwrap()
+      },
+      BatchSize::SmallInput,
+    )
   });
 }
 
