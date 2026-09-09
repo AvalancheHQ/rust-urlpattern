@@ -14,9 +14,13 @@ serde = { version = "1.0.127", features = ["derive"] }
 icu_properties = "2"
 
 [dev-dependencies]
+criterion = { version = "5.0.1", package = "codspeed-criterion-compat" }
 serde_json = "1.0.66"
-criterion = "0.5"
 
 [[bench]]
 name = "parse_patterns"
+harness = false
+
+[[bench]]
+name = "match_urls"
 harness = false

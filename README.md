@@ -1,5 +1,7 @@
 # urlpattern
 
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/AvalancheHQ/rust-urlpattern?utm_source=badge)
+
 This crate implements the [`URLPattern` web API][urlpattern] in Rust. We aim to
 follow [the specification][spec] as closely as possible.
 
@@ -26,6 +28,16 @@ fn main() {
   let result = pattern.exec(UrlPatternMatchInput::Url(url)).unwrap().unwrap();
   assert_eq!(result.pathname.groups.get("id").unwrap().as_ref().unwrap(), "123");
 }
+```
+
+## Benchmarks
+
+Benchmarks live in `benches/` and are tracked continuously with
+[CodSpeed](https://app.codspeed.io/AvalancheHQ/rust-urlpattern). To run them
+locally:
+
+```sh
+cargo bench
 ```
 
 ## Contributing
