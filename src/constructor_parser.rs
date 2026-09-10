@@ -258,12 +258,14 @@ impl<'a> ConstructorStringParser<'a> {
     &mut self,
   ) -> Result<(), Error> {
     let protocol_string = self.make_component_string();
-    let protocol_component = crate::component::Component::<R>::compile(
+    // Only the matcher is needed here, so avoid compiling the (unused) regexp
+    // of the protocol component.
+    let protocol_matcher = crate::component::Component::<R>::compile_matcher(
       Some(&protocol_string),
       crate::canonicalize_and_process::canonicalize_protocol,
       Default::default(),
     )?;
-    if protocol_component.protocol_component_matches_special_scheme() {
+    if crate::component::matcher_matches_special_scheme(&protocol_matcher) {
       self.protocol_matches_special_scheme = true;
     }
     Ok(())

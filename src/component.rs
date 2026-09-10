@@ -64,16 +64,33 @@ impl<R: RegExp> Component<R> {
     })
   }
 
+  /// Compile only the matcher of a component.
+  ///
+  /// This is a cheaper variant of [`Component::compile`] for callers that only
+  /// need to match against the component, and never look at its regexp,
+  /// pattern string or group name list. It notably avoids compiling the
+  /// component regexp, which is by far the most expensive part of compiling a
+  /// component.
+  pub(crate) fn compile_matcher<F>(
+    input: Option<&str>,
+    encoding_callback: F,
+    options: Options,
+  ) -> Result<Matcher<R>, Error>
+  where
+    F: Fn(&str) -> Result<String, Error>,
+  {
+    let part_list = crate::parser::parse_pattern_string(
+      input.unwrap_or("*"),
+      &options,
+      encoding_callback,
+    )?;
+    let flags = if options.ignore_case { "ui" } else { "u" };
+    Ok(generate_matcher::<R>(&part_list, &options, flags))
+  }
+
   // Ref: https://wicg.github.io/urlpattern/#protocol-component-matches-a-special-scheme
   pub(crate) fn protocol_component_matches_special_scheme(&self) -> bool {
-    const SPECIAL_SCHEMES: [&str; 6] =
-      ["ftp", "file", "http", "https", "ws", "wss"];
-    for scheme in SPECIAL_SCHEMES {
-      if self.matcher.matches(scheme).is_some() {
-        return true;
-      }
-    }
-    false
+    matcher_matches_special_scheme(&self.matcher)
   }
 
   // Ref: https://wicg.github.io/urlpattern/#create-a-component-match-result
@@ -100,6 +117,20 @@ impl<R: RegExp> Component<R> {
     }
     Ok(self)
   }
+}
+
+// Ref: https://wicg.github.io/urlpattern/#protocol-component-matches-a-special-scheme
+pub(crate) fn matcher_matches_special_scheme<R: RegExp>(
+  matcher: &Matcher<R>,
+) -> bool {
+  const SPECIAL_SCHEMES: [&str; 6] =
+    ["ftp", "file", "http", "https", "ws", "wss"];
+  for scheme in SPECIAL_SCHEMES {
+    if matcher.matches(scheme).is_some() {
+      return true;
+    }
+  }
+  false
 }
 
 // Ref: https://wicg.github.io/urlpattern/#generate-a-regular-expression-and-name-list
